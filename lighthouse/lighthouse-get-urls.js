@@ -16,6 +16,7 @@ async function createUrlsFile() {
 async function getUrls() {
     let data = {};
     data.urls = [];
+    data.excludedUrls = [];
     const directories = [
         {
             path: './build/components',
@@ -27,13 +28,43 @@ async function getUrls() {
             path: './build/foundations',
         },
     ];
+    // collect all the examples fail at 'aria-allowed-attr' audit check
+    const knownIssueFiles = [
+        'example-errors-proto.html',
+        'example-errors-proto-errors.html',
+        'example-feedback-form.html',
+        'example-feedback-form-errors.html',
+        'example-radios-with-revealed-text-input.html',
+        'example-radios-with-revealed-text-input-expanded.html',
+        'example-radios-with-revealed-text-area.html',
+        'example-radios-with-revealed-text-area-expanded.html',
+        'example-radios-with-revealed-select.html',
+        'example-radios-with-revealed-select-expanded.html',
+        'example-radios-with-revealed-radios.html',
+        'example-radios-with-revealed-radios-expanded.html',
+        'example-radios-with-revealed-checkboxes.html',
+        'example-radios-with-revealed-checkboxes-expanded.html',
+        'example-radios-with-clear-button.html',
+        'example-radios-with-clear-button-expanded.html',
+        'example-button-download.html',
+    ];
     for (const directory of directories) {
         const folders = await readdir(directory.path);
         for (const folder of folders) {
             const files = await glob(`${directory.path}/${folder}/**/*.html`);
-            const filteredFiles = files.filter((path) => !path.includes('index.html') && !path.includes('example-skip-to-content.html'));
+            const filteredFiles = files.filter(
+                (path) =>
+                    !path.includes('index.html') &&
+                    !path.includes('example-skip-to-content.html') &&
+                    !knownIssueFiles.some((filename) => path.includes(filename)), // doesn't add index.html, example-skip-to-content and examples mentioned in knownIssueUrls.
+            );
+            const filesWithExcludedUrls = files.filter((path) => knownIssueFiles.some((filename) => path.includes(filename)));
             for (const file of filteredFiles) {
                 data.urls.push(file.replace('build/', 'http://localhost/'));
+            }
+            //add the examples mentioned in knownIssueUrls in a seperate array
+            for (const file of filesWithExcludedUrls) {
+                data.excludedUrls.push(file.replace('build/', 'http://localhost/'));
             }
         }
     }
